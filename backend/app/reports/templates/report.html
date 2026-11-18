@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Relatório Técnico — {{ project_name }}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 16mm 14mm 18mm 14mm;
+      @bottom-right {
+        content: "Página " counter(page) " de " counter(pages);
+        font-family: DejaVu Sans, sans-serif;
+        font-size: 8pt;
+        color: #64748b;
+      }
+      @bottom-left {
+        content: "GERAT Web — Planejamento Hidrotérmico (REE & Curva Guia)";
+        font-family: DejaVu Sans, sans-serif;
+        font-size: 8pt;
+        color: #64748b;
+      }
+    }
+
+    body {
+      font-family: DejaVu Sans, sans-serif;
+      font-size: 9pt;
+      color: #0f172a;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .header {
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+
+    .header h1 {
+      font-size: 16pt;
+      margin: 0 0 4px 0;
+      color: #0f172a;
+    }
+
+    .header .subtitle {
+      font-size: 9.5pt;
+      color: #0284c7;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .meta-grid {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+    }
+
+    .meta-grid td {
+      padding: 2px 6px 2px 0;
+      color: #334155;
+    }
+
+    h2 {
+      font-size: 11.5pt;
+      color: #0f172a;
+      border-left: 4px solid #0284c7;
+      padding-left: 8px;
+      margin: 16px 0 8px 0;
+    }
+
+    .kpi-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 6px;
+      margin-bottom: 10px;
+    }
+
+    .kpi-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      width: 25%;
+      vertical-align: top;
+    }
+
+    .kpi-label {
+      font-size: 7.5pt;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .kpi-value {
+      font-size: 12pt;
+      font-weight: bold;
+      color: #0f172a;
+      margin-top: 3px;
+    }
+
+    .kpi-value.danger {
+      color: #dc2626;
+    }
+
+    .kpi-value.ok {
+      color: #059669;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0 12px 0;
+      font-size: 8pt;
+    }
+
+    table.data-table th {
+      background: #f1f5f9;
+      color: #334155;
+      text-align: left;
+      padding: 5px 6px;
+      border-bottom: 1.5px solid #cbd5e1;
+      font-weight: bold;
+    }
+
+    table.data-table td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    table.data-table th.num,
+    table.data-table td.num {
+      text-align: right;
+    }
+
+    .chart-box {
+      margin: 10px 0 14px 0;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+
+    .chart-box img {
+      width: 100%;
+      height: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="subtitle">GERAT WEB — RELATÓRIO TÉCNICO DE PLANEJAMENTO HIDROTÉRMICO</div>
+    <h1>{{ project_name }}</h1>
+    <table class="meta-grid">
+      <tr>
+        <td><strong>Turma:</strong> {{ classroom_name }}</td>
+        <td><strong>Responsável:</strong> {{ author_name }} ({{ author_email }})</td>
+      </tr>
+      <tr>
+        <td><strong>Horizonte:</strong> {{ "%02d"|format(config.start_month) }}/{{ config.start_year }} a {{ "%02d"|format(config.end_month) }}/{{ config.end_year }}</td>
+        <td><strong>Emitido em:</strong> {{ generated_at }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>1. Resumo Executivo e Indicadores (KPIs)</h2>
+  <table class="kpi-table">
+    <tr>
+      <td class="kpi-card">
+        <div class="kpi-label">EA Máxima (REE)</div>
+        <div class="kpi-value">{{ "{:,.2f}".format(summary.ea_max_mwm) }} MWmês</div>
+      </td>
+      <td class="kpi-card">
+        <div class="kpi-label">Carga Simulada</div>
+        <div class="kpi-value">{{ "{:,.2f}".format(config.load_mwm) }} MWmês</div>
+      </td>
+      <td class="kpi-card">
+        <div class="kpi-label">Custo Total Anual</div>
+        <div class="kpi-value">{{ "{:,.2f}".format(summary.total_cost_kusd_year) }} kUS$</div>
+      </td>
+      <td class="kpi-card">
+        <div class="kpi-label">Déficit Máximo</div>
+        <div class="kpi-value {% if summary.max_deficit_mwm > 0 %}danger{% else %}ok{% endif %}">
+          {{ "{:,.2f}".format(summary.max_deficit_mwm) }} MWmês
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td class="kpi-card">
+        <div class="kpi-label">ENA Média</div>
+        <div class="kpi-value">{{ "{:,.2f}".format(summary.avg_ena_mwm) }} MWmês</div>
+      </td>
+      <td class="kpi-card">
+        <div class="kpi-label">Geração Térmica Média</div>
+        <div class="kpi-value">{{ "{:,.2f}".format(summary.avg_thermal_mwm) }} MWmês</div>
+      </td>
+      <td class="kpi-card">
+        <div class="kpi-label">Meses com Déficit</div>
+        <div class="kpi-value {% if summary.deficit_months > 0 %}danger{% else %}ok{% endif %}">
+          {{ summary.deficit_months }}
+        </div>
+      </td>
+      <td class="kpi-card">
+        <div class="kpi-label">Período Crítico</div>
+        <div class="kpi-value" style="font-size: 9.5pt;">
+          {% if summary.critical_period %}
+            {{ "%02d"|format(summary.critical_period.start_month) }}/{{ summary.critical_period.start_year }} –
+            {{ "%02d"|format(summary.critical_period.end_month) }}/{{ summary.critical_period.end_year }}
+            ({{ summary.critical_period.duration_months }}m)
+          {% else %}
+            N/A
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <h2>2. Parque Hidrotérmico Configurado</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Usina Hidrelétrica</th>
+        <th class="num">Vmax (hm³)</th>
+        <th class="num">Vmin (hm³)</th>
+        <th class="num">Produtibilidade (MW/m³/s)</th>
+        <th class="num">Potência (MW)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for h in hydro_plants %}
+      <tr>
+        <td>{{ h.name }}</td>
+        <td class="num">{{ "{:,.1f}".format(h.vmax_hm3) }}</td>
+        <td class="num">{{ "{:,.1f}".format(h.vmin_hm3) }}</td>
+        <td class="num">{{ "{:,.3f}".format(h.productivity_mw_m3s) }}</td>
+        <td class="num">{{ "{:,.1f}".format(h.installed_power_mw) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Usina Térmica</th>
+        <th>Combustível</th>
+        <th class="num">Potência (MW)</th>
+        <th class="num">FCmax / FCmin</th>
+        <th class="num">C. Fixo (US$/kW)</th>
+        <th class="num">C. Var (US$/MWh)</th>
+        <th class="num">Vida Útil</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in thermal_plants %}
+      <tr>
+        <td>{{ t.name }}</td>
+        <td>{{ t.fuel_type }}</td>
+        <td class="num">{{ "{:,.1f}".format(t.installed_power_mw) }}</td>
+        <td class="num">{{ "{:.2f}".format(t.fc_max) }} / {{ "{:.2f}".format(t.fc_min) }}</td>
+        <td class="num">{{ "{:,.1f}".format(t.fixed_cost_usd_kw) }}</td>
+        <td class="num">{{ "{:,.2f}".format(t.variable_cost_usd_mwh) }}</td>
+        <td class="num">{{ t.useful_life_years }} anos</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>3. Desempenho Operativo (Gráficos Vetoriais)</h2>
+  <div class="chart-box">
+    <img src="{{ storage_svg }}" alt="Armazenamento e Período Crítico" />
+  </div>
+  <div class="chart-box">
+    <img src="{{ dispatch_svg }}" alt="Composição da Geração" />
+  </div>
+
+  <div class="page-break"></div>
+  <h2>4. Análise Econômica e Curvas de Sensibilidade</h2>
+  <div class="chart-box">
+    <img src="{{ screening_svg }}" alt="Screening Curves" />
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Usina Térmica</th>
+        <th class="num">GT Média (MWano)</th>
+        <th class="num">FRC</th>
+        <th class="num">Custo Fixo (1000 US$)</th>
+        <th class="num">Custo Var. (1000 US$)</th>
+        <th class="num">Custo Total (1000 US$)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in summary.economics %}
+      <tr>
+        <td>{{ e.name }}</td>
+        <td class="num">{{ "{:,.2f}".format(e.avg_generation_mwm) }}</td>
+        <td class="num">{{ "{:.4f}".format(e.frc) }}</td>
+        <td class="num">{{ "{:,.2f}".format(e.fixed_cost_kusd_year) }}</td>
+        <td class="num">{{ "{:,.2f}".format(e.variable_cost_kusd_year) }}</td>
+        <td class="num"><strong>{{ "{:,.2f}".format(e.total_cost_kusd_year) }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if include_monthly_table and monthly_results %}
+  <div class="page-break"></div>
+  <h2>5. Anexo — Série Mensal da Simulação</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Ano/Mês</th>
+        <th class="num">ENA (MWmês)</th>
+        <th class="num">GH (MWmês)</th>
+        <th class="num">GT Total (MWmês)</th>
+        <th class="num">EA (MWmês)</th>
+        <th class="num">EA (%)</th>
+        <th class="num">Vert. (MWmês)</th>
+        <th class="num">Déficit (MWmês)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in monthly_results %}
+      <tr>
+        <td>{{ r.year }}-{{ "%02d"|format(r.month) }}</td>
+        <td class="num">{{ "{:,.1f}".format(r.enat_mwm) }}</td>
+        <td class="num">{{ "{:,.1f}".format(r.gh_delivered_mwm) }}</td>
+        <td class="num">{{ "{:,.1f}".format(r.total_thermal_mwm) }}</td>
+        <td class="num">{{ "{:,.1f}".format(r.earm_mwm) }}</td>
+        <td class="num">{{ "{:.1f}%".format(r.earm_pct) }}</td>
+        <td class="num">{{ "{:,.1f}".format(r.evert_mwm) }}</td>
+        <td class="num">{{ "{:,.1f}".format(r.deficit_mwm) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</body>
+</html>

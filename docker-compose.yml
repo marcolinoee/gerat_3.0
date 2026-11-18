@@ -1,0 +1,81 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gerat_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gerat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gerat_pg_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-gerat}
+    volumes:
+      - gerat_pgdata:/var/lib/postgresql/data
+    networks:
+      - gerat_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gerat} -d ${POSTGRES_DB:-gerat}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${DOCKER_BUILD_TARGET:-production}
+    image: gerat-backend:latest
+    container_name: gerat_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gerat}:${POSTGRES_PASSWORD:-gerat_pg_pass}@db:5432/${POSTGRES_DB:-gerat}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-gerat-web-super-secret-jwt-key-2026-change-me}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-professor@gerat.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-GeratProf2026!}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ENVIRONMENT: ${DOCKER_BUILD_TARGET:-production}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gerat_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ${DOCKER_BUILD_TARGET:-production}
+    image: gerat-frontend:latest
+    container_name: gerat_frontend
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - gerat_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+networks:
+  gerat_net:
+    driver: bridge
+
+volumes:
+  gerat_pgdata:
